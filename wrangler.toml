@@ -1,0 +1,25 @@
+name = "stremio-aio-catalog"
+main = "src/worker.js"
+compatibility_date = "2024-01-15"
+compatibility_flags = ["nodejs_compat"]
+
+[env.production]
+name = "stremio-aio-catalog"
+
+[env.staging]
+name = "stremio-aio-catalog-staging"
+
+# KV namespace for storing user playlists
+[[kv_namespaces]]
+binding = "PLAYLISTS"
+preview_id = "your-preview-kv-namespace-id"
+id = "your-production-kv-namespace-id"
+
+# Environment variables
+[vars]
+CACHE_TTL = "3600"
+MAX_ITEMS_PER_PAGE = "100"
+
+# For development
+[dev]
+port = 8787

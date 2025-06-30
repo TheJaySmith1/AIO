@@ -183,25 +183,53 @@ Server logs will show:
 - Cache hits/misses
 - Error details for troubleshooting
 
-## Deployment
+## Deployment Options
 
-### Local Deployment
+### Option 1: Cloudflare Workers (Recommended)
 
-The app runs locally by default. To make it accessible to Stremio on other devices:
+**Free, serverless hosting with global edge locations**
 
-1. Ensure your computer allows incoming connections on the specified port
-2. Use your computer's IP address instead of `localhost` in the add-on URL
-3. Consider using a reverse proxy like nginx for HTTPS
+✅ **Advantages:**
+- Completely free for most usage
+- Global CDN with ultra-low latency
+- Automatic HTTPS and DDoS protection
+- Zero server maintenance
+- Instant deployments
 
-### Production Deployment
+For detailed setup instructions, see **[CLOUDFLARE-SETUP.md](CLOUDFLARE-SETUP.md)**
 
-For production deployment:
+Quick start:
+```bash
+cp package-cloudflare.json package.json
+npm install
+npx wrangler login
+npx wrangler kv:namespace create PLAYLISTS
+# Update wrangler.toml with KV namespace IDs
+npm run deploy
+```
 
+### Option 2: Traditional Node.js Server
+
+**Self-hosted on your own server or VPS**
+
+For local/server deployment:
+
+```bash
+npm install
+npm start
+```
+
+**Production considerations:**
 1. Use a proper database instead of in-memory storage
 2. Implement user authentication if needed
-3. Set up HTTPS for secure connections
+3. Set up HTTPS with a reverse proxy (nginx/Apache)
 4. Use a process manager like PM2
 5. Configure proper logging and monitoring
+
+**Making it accessible to other devices:**
+1. Ensure your server allows incoming connections on the specified port
+2. Use your server's IP address instead of `localhost` in the add-on URL
+3. Consider using a reverse proxy for HTTPS
 
 ## Contributing
 
