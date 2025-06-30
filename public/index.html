@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stremio AIO Catalog Builder</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .card-hover:hover {
+            transform: translateY(-2px);
+            transition: transform 0.2s ease-in-out;
+        }
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            transition: all 0.3s ease;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <!-- Toast Container -->
+    <div id="toast-container"></div>
+
+    <!-- Header -->
+    <header class="gradient-bg text-white shadow-lg">
+        <div class="container mx-auto px-6 py-8">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-4xl font-bold flex items-center">
+                        <i class="fas fa-stream mr-3"></i>
+                        Stremio AIO Catalog Builder
+                    </h1>
+                    <p class="text-blue-100 mt-2">Build unlimited MDBList playlists into a single Stremio add-on</p>
+                </div>
+                <div class="text-right">
+                    <div class="bg-white bg-opacity-20 px-4 py-2 rounded-lg">
+                        <span class="text-sm">Your Token:</span>
+                        <div class="font-mono text-lg" id="user-token">Loading...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-6 py-8">
+        <!-- Add-on URL Section -->
+        <section class="bg-white rounded-xl shadow-lg p-6 mb-8">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4 flex items-center">
+                <i class="fas fa-link mr-3 text-blue-600"></i>
+                Your Stremio Add-on URL
+            </h2>
+            <div class="bg-gray-50 p-4 rounded-lg border-2 border-dashed border-gray-300">
+                <div class="flex items-center space-x-3">
+                    <input type="text" id="addon-url" readonly 
+                           class="flex-1 bg-white border border-gray-300 rounded-lg px-4 py-2 font-mono text-sm"
+                           placeholder="Add playlists to generate your add-on URL">
+                    <button onclick="copyUrl()" 
+                            class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors">
+                        <i class="fas fa-copy mr-2"></i>Copy
+                    </button>
+                    <button onclick="installAddon()" 
+                            class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors">
+                        <i class="fas fa-plus mr-2"></i>Install in Stremio
+                    </button>
+                </div>
+                <p class="text-sm text-gray-600 mt-2">
+                    <i class="fas fa-info-circle mr-1"></i>
+                    Copy this URL and paste it in Stremio's add-on installation page
+                </p>
+            </div>
+        </section>
+
+        <!-- Add Playlist Section -->
+        <section class="bg-white rounded-xl shadow-lg p-6 mb-8">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4 flex items-center">
+                <i class="fas fa-plus-circle mr-3 text-green-600"></i>
+                Add MDBList Playlist
+            </h2>
+            <form id="add-playlist-form" class="space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Playlist Name</label>
+                        <input type="text" id="playlist-name" required
+                               class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                               placeholder="e.g., My Movie Collection">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">MDBList ID</label>
+                        <input type="text" id="list-id" required
+                               class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                               placeholder="e.g., 12345">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">MDBList API Key</label>
+                    <input type="password" id="api-key" required
+                           class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                           placeholder="Your MDBList API key">
+                </div>
+                <div class="flex space-x-3">
+                    <button type="button" onclick="testConnection()" 
+                            class="bg-yellow-600 hover:bg-yellow-700 text-white px-6 py-2 rounded-lg transition-colors">
+                        <i class="fas fa-flask mr-2"></i>Test Connection
+                    </button>
+                    <button type="submit" 
+                            class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg transition-colors">
+                        <i class="fas fa-plus mr-2"></i>Add Playlist
+                    </button>
+                </div>
+            </form>
+        </section>
+
+        <!-- Playlists List -->
+        <section class="bg-white rounded-xl shadow-lg p-6">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4 flex items-center">
+                <i class="fas fa-list mr-3 text-purple-600"></i>
+                Your Playlists
+                <span id="playlist-count" class="ml-2 bg-purple-100 text-purple-800 text-sm px-2 py-1 rounded-full">0</span>
+            </h2>
+            <div id="playlists-container">
+                <div class="text-center py-12 text-gray-500">
+                    <i class="fas fa-inbox text-6xl mb-4"></i>
+                    <p class="text-lg">No playlists added yet</p>
+                    <p class="text-sm">Add your first MDBList playlist above to get started</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-gray-800 text-white py-8 mt-12">
+        <div class="container mx-auto px-6 text-center">
+            <p>&copy; 2024 Stremio AIO Catalog Builder. Built for the community.</p>
+            <div class="mt-4 space-x-4">
+                <a href="https://mdblist.com" target="_blank" class="text-blue-400 hover:text-blue-300">
+                    <i class="fas fa-external-link-alt mr-1"></i>MDBList
+                </a>
+                <a href="https://stremio.com" target="_blank" class="text-blue-400 hover:text-blue-300">
+                    <i class="fas fa-external-link-alt mr-1"></i>Stremio
+                </a>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        let userToken = null;
+        let playlists = [];
+
+        // Initialize the app
+        document.addEventListener('DOMContentLoaded', async () => {
+            await initializeUserToken();
+            await loadPlaylists();
+            updateUI();
+        });
+
+        // Initialize user token
+        async function initializeUserToken() {
+            try {
+                const response = await fetch('/api/generate-token', { method: 'POST' });
+                const data = await response.json();
+                userToken = data.userToken;
+                document.getElementById('user-token').textContent = userToken;
+            } catch (error) {
+                console.error('Error generating token:', error);
+                showToast('Error generating user token', 'error');
+            }
+        }
+
+        // Load playlists
+        async function loadPlaylists() {
+            if (!userToken) return;
+            
+            try {
+                const response = await fetch(`/api/playlists/${userToken}`);
+                playlists = await response.json();
+                renderPlaylists();
+                updateUI();
+            } catch (error) {
+                console.error('Error loading playlists:', error);
+                showToast('Error loading playlists', 'error');
+            }
+        }
+
+        // Update UI elements
+        function updateUI() {
+            const count = playlists.length;
+            document.getElementById('playlist-count').textContent = count;
+            
+            if (count > 0 && userToken) {
+                const addonUrl = `${window.location.origin}/${userToken}/manifest.json`;
+                document.getElementById('addon-url').value = addonUrl;
+            } else {
+                document.getElementById('addon-url').value = '';
+            }
+        }
+
+        // Render playlists
+        function renderPlaylists() {
+            const container = document.getElementById('playlists-container');
+            
+            if (playlists.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-12 text-gray-500">
+                        <i class="fas fa-inbox text-6xl mb-4"></i>
+                        <p class="text-lg">No playlists added yet</p>
+                        <p class="text-sm">Add your first MDBList playlist above to get started</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = playlists.map(playlist => `
+                <div class="border border-gray-200 rounded-lg p-4 mb-3 card-hover">
+                    <div class="flex items-center justify-between">
+                        <div class="flex-1">
+                            <h3 class="font-semibold text-lg text-gray-800">${playlist.name}</h3>
+                            <p class="text-sm text-gray-600">List ID: ${playlist.listId}</p>
+                            <p class="text-xs text-gray-500">Added: ${new Date(playlist.addedAt).toLocaleDateString()}</p>
+                        </div>
+                        <div class="flex space-x-2">
+                            <button onclick="removePlaylist('${playlist.id}')" 
+                                    class="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded transition-colors">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Add playlist form handler
+        document.getElementById('add-playlist-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const name = document.getElementById('playlist-name').value;
+            const listId = document.getElementById('list-id').value;
+            const apiKey = document.getElementById('api-key').value;
+            
+            try {
+                const response = await fetch(`/api/playlists/${userToken}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, listId, apiKey })
+                });
+                
+                if (response.ok) {
+                    showToast('Playlist added successfully!', 'success');
+                    document.getElementById('add-playlist-form').reset();
+                    await loadPlaylists();
+                } else {
+                    const error = await response.json();
+                    showToast(error.error || 'Error adding playlist', 'error');
+                }
+            } catch (error) {
+                console.error('Error adding playlist:', error);
+                showToast('Error adding playlist', 'error');
+            }
+        });
+
+        // Test connection
+        async function testConnection() {
+            const listId = document.getElementById('list-id').value;
+            const apiKey = document.getElementById('api-key').value;
+            
+            if (!listId || !apiKey) {
+                showToast('Please enter List ID and API Key', 'warning');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/test-mdblist', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ listId, apiKey })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showToast(`Connection successful! Found "${data.listName}" with ${data.itemCount} items`, 'success');
+                } else {
+                    showToast(data.error || 'Connection failed', 'error');
+                }
+            } catch (error) {
+                console.error('Error testing connection:', error);
+                showToast('Error testing connection', 'error');
+            }
+        }
+
+        // Remove playlist
+        async function removePlaylist(playlistId) {
+            if (!confirm('Are you sure you want to remove this playlist?')) return;
+            
+            try {
+                const response = await fetch(`/api/playlists/${userToken}/${playlistId}`, {
+                    method: 'DELETE'
+                });
+                
+                if (response.ok) {
+                    showToast('Playlist removed successfully!', 'success');
+                    await loadPlaylists();
+                } else {
+                    showToast('Error removing playlist', 'error');
+                }
+            } catch (error) {
+                console.error('Error removing playlist:', error);
+                showToast('Error removing playlist', 'error');
+            }
+        }
+
+        // Copy URL to clipboard
+        function copyUrl() {
+            const urlInput = document.getElementById('addon-url');
+            if (!urlInput.value) {
+                showToast('Add some playlists first to generate URL', 'warning');
+                return;
+            }
+            
+            urlInput.select();
+            document.execCommand('copy');
+            showToast('Add-on URL copied to clipboard!', 'success');
+        }
+
+        // Install addon in Stremio
+        function installAddon() {
+            const url = document.getElementById('addon-url').value;
+            if (!url) {
+                showToast('Add some playlists first to generate URL', 'warning');
+                return;
+            }
+            
+            const stremioUrl = `stremio://${encodeURIComponent(url)}`;
+            window.open(stremioUrl, '_blank');
+            showToast('Opening Stremio... If it doesn\'t open automatically, copy the URL manually', 'info');
+        }
+
+        // Show toast notification
+        function showToast(message, type = 'info') {
+            const colors = {
+                success: 'bg-green-500',
+                error: 'bg-red-500',
+                warning: 'bg-yellow-500',
+                info: 'bg-blue-500'
+            };
+            
+            const icons = {
+                success: 'fa-check-circle',
+                error: 'fa-exclamation-triangle',
+                warning: 'fa-exclamation-circle',
+                info: 'fa-info-circle'
+            };
+            
+            const toast = document.createElement('div');
+            toast.className = `toast ${colors[type]} text-white px-6 py-3 rounded-lg shadow-lg flex items-center space-x-3`;
+            toast.innerHTML = `
+                <i class="fas ${icons[type]}"></i>
+                <span>${message}</span>
+                <button onclick="this.parentElement.remove()" class="ml-4 text-white hover:text-gray-200">
+                    <i class="fas fa-times"></i>
+                </button>
+            `;
+            
+            document.getElementById('toast-container').appendChild(toast);
+            
+            setTimeout(() => {
+                if (toast.parentElement) {
+                    toast.remove();
+                }
+            }, 5000);
+        }
+    </script>
+</body>
+</html>
